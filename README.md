@@ -1,2 +1,2 @@
 # BoTanoth
-A simple free bot of tanoth game
+A simple free Bot of Tanoth game
