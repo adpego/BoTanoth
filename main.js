@@ -87,22 +87,28 @@ async function getCurrentGold(){
 function parseAdventureXMLResponse(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-    
-    const adventures = xmlDoc.querySelectorAll('array > data > value > struct');
-    
-    const extractedData = Array.from(adventures).map(adventure => {
-        const findValueByName = (struct, name) => {
-            const members = struct.getElementsByTagName('member');
-            for (const member of members) {
-                const nameElement = member.getElementsByTagName('name')[0];
-                if (nameElement.textContent === name) {
-                    return member.getElementsByTagName('value')[0]
-                        .getElementsByTagName('i4')[0].textContent;
+
+    // Helper function to find value by name in a struct
+    const findValueByName = (struct, name, type = 'i4') => {
+        const member = Array.from(struct.getElementsByTagName('member')).find(member => {
+            const nameElement = member.getElementsByTagName('name')[0];
+            return nameElement && nameElement.textContent === name;
+        });
+
+        if (member) {
+            const valueNode = member.getElementsByTagName('value')[0];
+            if (valueNode) {
+                const targetNode = valueNode.getElementsByTagName(type)[0];
+                if (targetNode) {
+                    return targetNode.textContent;
                 }
             }
-            return null;
-        };
+        }
+        return null;
+    };
 
+    // Extract adventure data
+    const adventures = Array.from(xmlDoc.querySelectorAll('array > data > value > struct')).map(adventure => {
         return {
             difficulty: parseInt(findValueByName(adventure, 'difficulty')),
             gold: parseInt(findValueByName(adventure, 'gold')),
@@ -111,31 +117,18 @@ function parseAdventureXMLResponse(xmlString) {
             id: parseInt(findValueByName(adventure, 'quest_id'))
         };
     });
-    
-    // Find adventure counts using the same findValueByName logic
-    const findAnswerValue = (name) => {
-        const members = xmlDoc.getElementsByTagName('member');
-        for (const member of members) {
-            const nameElement = member.getElementsByTagName('name')[0];
-            if (nameElement && nameElement.textContent === name) {
-                return member.getElementsByTagName('value')[0]
-                    .getElementsByTagName('i4')[0].textContent;
-            }
-        }
-        return null;
-    };
 
-    const adventuresMadeToday = parseInt(findAnswerValue('adventures_made_today'));
-    const freeAdventuresPerDay = parseInt(findAnswerValue('free_adventures_per_day'));
-    
+    // Extract adventure counts
+    const adventuresMadeToday = parseInt(findValueByName(xmlDoc, 'adventures_made_today'));
+    const freeAdventuresPerDay = parseInt(findValueByName(xmlDoc, 'free_adventures_per_day'));
+
     return {
-        adventures: extractedData,
+        adventures,
         adventuresMadeToday,
         freeAdventuresPerDay,
         hasRemainingAdventures: adventuresMadeToday < freeAdventuresPerDay
     };
 }
-
 
 function parseCircleXMLResponse(xmlString) {
     const parser = new DOMParser();
