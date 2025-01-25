@@ -1,5 +1,22 @@
 
 
+const botConfig = {
+    // Priority: 'experience' or 'gold'
+    priority: 'gold',
+
+    // Difficulty range: 'easy', 'medium', 'difficult', 'very_difficult'
+    difficulty: 'medium',
+
+    // After each adventure, spend gold on: 'attributes' or 'circle'
+    spendGoldOn: 'attributes',
+
+    // Additional settings (optional)
+    minGoldToSpend: 0, // Minimum gold required to spend if you want to safe some gold
+};
+
+
+const sleep = (seconds) => new Promise(resolve => setTimeout(resolve, seconds * 1000));
+
 // Function to fetch and parse XML data
 async function fetchXmlData(url, xmlData) {
     try {
@@ -89,6 +106,7 @@ function parseAdventureXMLResponse(xmlString) {
         return {
             difficulty: parseInt(findValueByName(adventure, 'difficulty')),
             gold: parseInt(findValueByName(adventure, 'gold')),
+            experience: parseInt(findValueByName(adventure, 'experience')),
             duration: parseInt(findValueByName(adventure, 'duration')),
             id: parseInt(findValueByName(adventure, 'quest_id'))
         };
@@ -260,12 +278,11 @@ async function processCircle() {
         } catch (error) {
             console.error('Error in circle process:', error);
         }
-        await sleep(1);
+        await sleep(0.5);
     }
 
 }
 
-const sleep = (seconds) => new Promise(resolve => setTimeout(resolve, seconds * 1000));
 
 // Main process function
 async function processAdventure() {
@@ -351,9 +368,198 @@ async function processAdventure() {
 
 processAdventure();
 
+function parseAttributesXMLResponse(xmlString) {
+    // Parse the XML string
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+    // Function to get the cost value for a given attribute
+    function getCostValue(attribute) {
+        // Find all <member> nodes
+        const members = xmlDoc.querySelectorAll('member');
+        for (const member of members) {
+            // Check if the <name> node matches the attribute
+            const nameNode = member.querySelector('name');
+            if (nameNode && nameNode.textContent === `cost_${attribute}`) {
+                // Get the corresponding <i4> value
+                const valueNode = member.querySelector('value > i4');
+                if (valueNode) {
+                    return parseInt(valueNode.textContent, 10);
+                }
+            }
+        }
+        return null; // Return null if not found
+    }
+
+    // Extract cost values for each attribute
+    const costValues = {
+        STR: getCostValue('str'),
+        DEX: getCostValue('dex'),
+        INT: getCostValue('int'),
+        CON: getCostValue('con')
+    };
+    return costValues;
+}   
+
+async function getUserAttributesCost(){
+    const xmlGetAttributes = `
+    <methodCall>
+        <methodName>GetUserAttributes</methodName>
+        <params>
+            <param>
+                <value>
+                    <string>${flashvars.sessionID}</string>
+                </value>
+            </param>
+        </params>
+    </methodCall>
+    `;
+
+    const xmlData = await fetchXmlData('https://s2-en.tanoth.gameforge.com/xmlrpc', xmlGetAttributes);
+    return parseAttributesXMLResponse(xmlData);
+
+}
+
+function getLowerCostAttribute(costValues) {
+    // Find the attribute with the lowest cost value
+    let minAttribute = null;
+    let minValue = Infinity;
+
+    for (const [attribute, value] of Object.entries(costValues)) {
+        if (value < minValue) {
+            minValue = value;
+            minAttribute = attribute;
+        }
+    }
+    return minAttribute;
+}
+
+async function upgradeUserAttribute(attributeName){
+    const xmlUpgradeAttribute = `
+    <methodCall>
+        <methodName>RaiseAttribute</methodName>
+        <params>
+            <param>
+                <value>
+                <string>${flashvars.sessionID}</string>
+                </value>
+            </param>
+            <param>
+                <value>
+                    <string>${attributeName}</string>
+                </value>
+            </param>
+        </params>
+    </methodCall>
+    `;
+
+    const xmlData = await fetchXmlData('https://s2-en.tanoth.gameforge.com/xmlrpc', xmlUpgradeAttribute);
+    return xmlData;
+}
 
 
+async function processAttributes() {
+    let costValues = await getUserAttributesCost();
+    
+    while (1) {
+        try {
+            console.log('Cost values:', costValues);
+            const lowerCostAttribute = getLowerCostAttribute(costValues);
+            console.log('Lower cost attribute:', lowerCostAttribute);
+            const currentGold = await getCurrentGold();
+            console.log('Current gold:', currentGold);
+            if(currentGold >= costValues[lowerCostAttribute]){
+                costValues = parseAttributesXMLResponse(upgradeUserAttribute(lowerCostAttribute));
+            } else {
+                console.log('Not enough gold to upgrade the attribute');
+                break;
+            }
+        } catch (error) {
+            console.error('Error in attribute process:', error);
+        }
+        await sleep(0.5);
+    }
+}
 
 
+async function runBot() {
+    // Sleep function to wait for specified seconds
+    
+    const url = 'https://s2-en.tanoth.gameforge.com/xmlrpc';
 
+    const xmlGetAdventures = `
+    <methodCall>
+        <methodName>GetAdventures</methodName>
+        <params>
+            <param>
+                <value>
+                    <string>${flashvars.sessionID}</string>
+                </value>
+            </param>
+        </params>
+    </methodCall>
+    `;
+
+    try {
+        while (true) {
+            console.log('Starting circle process...');
+            await processCircle();
+
+            console.log('Starting new adventure cycle...');
+            
+            const xmldata = await fetchXmlData(url, xmlGetAdventures);
+            const data = parseAdventureXMLResponse(xmldata);
+            // Check if we have remaining adventures
+            if (!data.hasRemainingAdventures) {
+                console.log('No more adventures available today');
+                return; // Exit the loop
+            }
+            
+            // Filter adventures and find the one with max gold
+            const easyAdventures = data.adventures.filter(adventure => adventure.difficulty < 1);
+            const bestAdventure = easyAdventures.reduce((max, current) => 
+                current.gold > max.gold ? current : max, easyAdventures[0]);
+            
+            console.log('Selected adventure:', bestAdventure);
+            console.log(`Adventures made today: ${data.adventuresMadeToday}/${data.freeAdventuresPerDay}`);
+            console.log('Remaining adventures:', data.freeAdventuresPerDay - data.adventuresMadeToday);
+
+
+            const xmlStartAdventure = `
+                <methodCall>
+                    <methodName>StartAdventure</methodName>
+                    <params>
+                        <param>
+                            <value>
+                                <string>${flashvars.sessionID}</string>
+                            </value>
+                        </param>
+                        <param>
+                            <value>
+                                <int>${bestAdventure.id}</int>
+                            </value>
+                        </param>
+                    </params>
+                </methodCall>
+            `;
+
+            const startAdventure = await fetchXmlData(url, xmlStartAdventure);
+            const duration = bestAdventure.duration / 2+10;
+            console.log(new Date().toLocaleTimeString());
+            console.log(`Waiting for ${duration} seconds before next adventure...`);
+            console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
+            await sleep(duration);
+            console.log("Getting the result of the adventure...");
+            const result = await fetchXmlData(url, xmlGetAdventures);
+            
+            await sleep(2);
+            
+        }
+    } catch (error) {
+        console.error('Error in adventure process:', error);
+        console.log('Retrying in 60 seconds...');
+        await sleep(60);
+        processAdventure();
+    }
+}
 
