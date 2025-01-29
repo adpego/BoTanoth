@@ -1,21 +1,28 @@
-
-
-const botConfig = {
+let botConfig = {
     // Priority: 'experience' or 'gold'
     priority: 'gold',
 
-    // Difficulty range: 'easy', 'medium', 'difficult', 'very_difficult'
+    // Max difficulty of adventures: 'easy', 'medium', 'difficult', 'very_difficult'
     difficulty: 'medium',
 
     // After each adventure, spend gold on: 'attributes' or 'circle'
-    spendGoldOn: 'attributes',
+    spendGoldOn: 'circle',
 
     // Additional settings (optional)
-    minGoldToSpend: 0, // Minimum gold required to spend if you want to safe some gold
+    minGoldToSpend: 0, // Minimum gold required to spend if you want to save some gold
+                        // This option specifies how much gold to keep
 };
 
 
 const sleep = (seconds) => new Promise(resolve => setTimeout(resolve, seconds * 1000));
+
+const difficultyMap = {
+    easy: -1,
+    medium: 0,
+    difficult: 1,
+    very_difficult: 2
+};
+
 
 // Function to fetch and parse XML data
 async function fetchXmlData(url, xmlData) {
@@ -112,7 +119,7 @@ function parseAdventureXMLResponse(xmlString) {
         return {
             difficulty: parseInt(findValueByName(adventure, 'difficulty')),
             gold: parseInt(findValueByName(adventure, 'gold')),
-            experience: parseInt(findValueByName(adventure, 'experience')),
+            experience: parseInt(findValueByName(adventure, 'exp')),
             duration: parseInt(findValueByName(adventure, 'duration')),
             id: parseInt(findValueByName(adventure, 'quest_id'))
         };
@@ -260,11 +267,15 @@ async function processCircle() {
             const bestItem = getBestCircleItem(circleItems);
             console.log('Best item to buy:', bestItem);
             const currentGold = await getCurrentGold();
-            console.log('Current gold:', await getCurrentGold());
-            if(currentGold >= circleItems[bestItem][3]){
+            console.log('Current gold:', currentGold);
+            
+            const itemCost = circleItems[bestItem][3];
+            
+            // Ensure that after the purchase, at least minGoldToKeep remains
+            if (currentGold - itemCost >= botConfig.minGoldToSpend) {
                 await buyCircleItem(bestItem);
             } else {
-                console.log('Not enough gold to buy the best item');
+                console.log('Not enough gold to buy the best item while keeping the minimum reserve');
                 break;
             }
 
@@ -276,6 +287,40 @@ async function processCircle() {
 
 }
 
+const filterAdventuresByDifficulty = (adventures, difficulty) => {
+    const maxDifficulty = difficultyMap[difficulty];
+    return adventures.filter(adventure => adventure.difficulty <= maxDifficulty);
+};
+
+const findBestAdventure = (adventures, priority) => {
+    if (priority === 'gold') {
+        return adventures.reduce((max, current) => 
+            current.gold > max.gold ? current : max, adventures[0]);
+    } else if (priority === 'experience') {
+        return adventures.reduce((max, current) => 
+            current.experience > max.experience ? current : max, adventures[0]);
+    } else {
+        throw new Error('Invalid priority. Must be "gold" or "experience".');
+    }
+};
+
+function getBestAdventure(data) {
+    const { difficulty, priority } = botConfig;
+
+    // Filter adventures based on difficulty
+    const filteredAdventures = filterAdventuresByDifficulty(data.adventures, difficulty);
+
+    // Check if any adventures match the difficulty filter
+    if (filteredAdventures.length === 0) {
+        console.log('No adventures match the selected difficulty.');
+        return null;
+    }
+
+    // Find the best adventure based on priority
+    const bestAdventure = findBestAdventure(filteredAdventures, priority);
+
+    return bestAdventure;
+}
 
 // Main process function
 async function processAdventure() {
@@ -298,8 +343,17 @@ async function processAdventure() {
 
     try {
         while (true) {
-            console.log('Starting circle process...');
-            await processCircle();
+            if(botConfig.spendGoldOn === 'attributes'){
+                console.log('Starting attributes process...');
+                await processAttributes();
+
+            } else if(botConfig.spendGoldOn === 'circle'){
+                console.log('Starting circle process...');
+                await processCircle();
+            } else {
+                console.error('Invalid value for spendGoldOn. Must be "attributes" or "circle".');
+            }
+
 
             console.log('Starting new adventure cycle...');
             
@@ -312,9 +366,7 @@ async function processAdventure() {
             }
             
             // Filter adventures and find the one with max gold
-            const easyAdventures = data.adventures.filter(adventure => adventure.difficulty < 1);
-            const bestAdventure = easyAdventures.reduce((max, current) => 
-                current.gold > max.gold ? current : max, easyAdventures[0]);
+            const bestAdventure = getBestAdventure(data);
             
             console.log('Selected adventure:', bestAdventure);
             console.log(`Adventures made today: ${data.adventuresMadeToday}/${data.freeAdventuresPerDay}`);
