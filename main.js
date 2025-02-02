@@ -1,19 +1,22 @@
 let botConfig = {
-    url: 'https://s2-en.tanoth.gameforge.com/xmlrpc',
+    // Server address for the game
+    server: 's2-en.tanoth.gameforge.com',
+    
     // Priority: 'experience' or 'gold'
     priority: 'gold',
-
+ 
     // Max difficulty of adventures: 'easy', 'medium', 'difficult', 'very_difficult'
     difficulty: 'medium',
-
+ 
     // After each adventure, spend gold on: 'attributes' or 'circle'
     spendGoldOn: 'circle',
-
-    // Additional settings (optional)
-    minGoldToSpend: 0, // Minimum gold required to spend if you want to save some gold
-                        // This option specifies how much gold to keep
-};
-
+ 
+    // Minimum gold to keep before spending (set to 0 to spend all gold)
+    minGoldToSpend: 0,
+ 
+    // Full URL for XML-RPC requests
+    url: 'https://' + server + '/xmlrpc',
+ };
 
 function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
