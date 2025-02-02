@@ -1,4 +1,5 @@
 let botConfig = {
+    url: 'https://s2-en.tanoth.gameforge.com/xmlrpc',
     // Priority: 'experience' or 'gold'
     priority: 'gold',
 
@@ -337,9 +338,6 @@ function getBestAdventure(data) {
 
 // Main process function
 async function processAdventure() {
-    // Sleep function to wait for specified seconds
-    
-    const url = 'https://s2-en.tanoth.gameforge.com/xmlrpc';
 
     const xmlGetAdventures = `
     <methodCall>
@@ -370,7 +368,7 @@ async function processAdventure() {
 
             console.log('Starting new adventure cycle...');
             
-            const xmldata = await fetchXmlData(url, xmlGetAdventures);
+            const xmldata = await fetchXmlData(botConfig.url, xmlGetAdventures);
             const data = parseAdventureXMLResponse(xmldata);
             // Check if we have remaining adventures
             if (!data.hasRemainingAdventures) {
@@ -404,14 +402,14 @@ async function processAdventure() {
                 </methodCall>
             `;
 
-            const startAdventure = await fetchXmlData(url, xmlStartAdventure);
+            const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
             const duration = bestAdventure.duration / 2+10;
             console.log(new Date().toLocaleTimeString());
             console.log(`Waiting for ${duration} seconds before next adventure...`);
             console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
             await sleep(duration);
             console.log("Getting the result of the adventure...");
-            const result = await fetchXmlData(url, xmlGetAdventures);
+            const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
             
             await sleep(2);
             
@@ -541,10 +539,6 @@ async function processAttributes() {
 
 
 async function runBot() {
-    // Sleep function to wait for specified seconds
-    
-    const url = 'https://s2-en.tanoth.gameforge.com/xmlrpc';
-
     const xmlGetAdventures = `
     <methodCall>
         <methodName>GetAdventures</methodName>
@@ -565,7 +559,7 @@ async function runBot() {
 
             console.log('Starting new adventure cycle...');
             
-            const xmldata = await fetchXmlData(url, xmlGetAdventures);
+            const xmldata = await fetchXmlData(botConfig.url, xmlGetAdventures);
             const data = parseAdventureXMLResponse(xmldata);
             // Check if we have remaining adventures
             if (!data.hasRemainingAdventures) {
@@ -601,14 +595,14 @@ async function runBot() {
                 </methodCall>
             `;
 
-            const startAdventure = await fetchXmlData(url, xmlStartAdventure);
+            const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
             const duration = bestAdventure.duration / 2+10;
             console.log(new Date().toLocaleTimeString());
             console.log(`Waiting for ${duration} seconds before next adventure...`);
             console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
             await sleep(duration);
             console.log("Getting the result of the adventure...");
-            const result = await fetchXmlData(url, xmlGetAdventures);
+            const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
             
             await sleep(2);
             
