@@ -4,19 +4,19 @@ let botConfig = {
     
     // Priority: 'experience' or 'gold'
     priority: 'gold',
- 
+
     // Max difficulty of adventures: 'easy', 'medium', 'difficult', 'very_difficult'
     difficulty: 'medium',
- 
+
     // After each adventure, spend gold on: 'attributes' or 'circle'
     spendGoldOn: 'circle',
- 
+
     // Minimum gold to keep before spending (set to 0 to spend all gold)
-    minGoldToSpend: 0,
- 
-    // Full URL for XML-RPC requests
-    url: 'https://' + server + '/xmlrpc',
- };
+    minGoldToSpend: 0
+};
+
+
+botConfig.url = 'https://' + botConfig.server + '/xmlrpc';
 
 function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
@@ -116,10 +116,27 @@ async function getCurrentGold(){
     </methodCall>
     `;
     
-    const xmlGoldData = await fetchXmlData('https://s2-en.tanoth.gameforge.com/xmlrpc', xmlGetGold);
+    const xmlGoldData = await fetchXmlData(botConfig.url, xmlGetGold);
     return parseGoldXMLResponse(xmlGoldData);
 }
 
+async function proccessCurrentTaskRunning(){
+    const xmlGetTask = `
+    <methodCall>
+        <methodName>MiniUpdate</methodName>
+        <params>
+            <param>
+                <value>
+                    <string>${flashvars.sessionID}</string>
+                </value>
+            </param>
+        </params>
+    </methodCall>
+    `;
+    
+    const xmlTaskData = await fetchXmlData(botConfig.url, xmlGetTask);
+    return parseAnotherTaskRunningXmlResponse(xmlTaskData);
+}
 
 
 function parseAdventureXMLResponse(xmlString) {
@@ -145,7 +162,9 @@ function parseAdventureXMLResponse(xmlString) {
         adventures,
         adventuresMadeToday,
         freeAdventuresPerDay,
-        hasRemainingAdventures: adventuresMadeToday < freeAdventuresPerDay
+        hasRemainingAdventures: adventuresMadeToday < freeAdventuresPerDay,
+        hasAnotherTaskRunning: isNaN(adventuresMadeToday),
+        taskRunning: null,
     };
 }
 
@@ -187,7 +206,7 @@ async function getCircleItems() {
     </methodCall>
     `;
 
-    const xmlCircleData = await fetchXmlData('https://s2-en.tanoth.gameforge.com/xmlrpc', xmlGetCircle);
+    const xmlCircleData = await fetchXmlData(botConfig.url, xmlGetCircle);
     return parseCircleXMLResponse(xmlCircleData);
 }
 
@@ -272,7 +291,7 @@ async function buyCircleItem(itemId) {
     </methodCall>
     `;
 
-    await fetchXmlData('https://s2-en.tanoth.gameforge.com/xmlrpc', xmlBuyCircle);
+    const result = await fetchXmlData(botConfig.url, xmlBuyCircle);
 }
 
 
@@ -339,6 +358,15 @@ function getBestAdventure(data) {
     return bestAdventure;
 }
 
+function parseAnotherTaskRunningXmlResponse(xmlString) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+    const timeTask = parseInt(findValueByName(xmlDoc, 'time', 'i4'));
+    const typeTask = findValueByName(xmlDoc, 'type', 'string');
+    return {timeTask, typeTask};
+}
+
 // Main process function
 async function processAdventure() {
 
@@ -359,50 +387,55 @@ async function processAdventure() {
             
     const xmldata = await fetchXmlData(botConfig.url, xmlGetAdventures);
     const data = parseAdventureXMLResponse(xmldata);
-    
+
     // Check if we have remaining adventures
-    if (!data.hasRemainingAdventures) {
+    if (data.hasAnotherTaskRunning) {
+        data.hasAnotherTaskRunning = true;
+        data.taskRunning = await proccessCurrentTaskRunning();
+
+    } else if (!data.hasRemainingAdventures) {
         console.log('No more adventures available today');
-        return false; // Return false to indicate no more adventures
+        
+    } else {
+        // Filter adventures and find the one with max gold
+        const bestAdventure = getBestAdventure(data);
+        
+        console.log('Selected adventure:', bestAdventure);
+        console.log(`Adventures made today: ${data.adventuresMadeToday}/${data.freeAdventuresPerDay}`);
+
+
+        const xmlStartAdventure = `
+            <methodCall>
+                <methodName>StartAdventure</methodName>
+                <params>
+                    <param>
+                        <value>
+                            <string>${flashvars.sessionID}</string>
+                        </value>
+                    </param>
+                    <param>
+                        <value>
+                            <int>${bestAdventure.id}</int>
+                        </value>
+                    </param>
+                </params>
+            </methodCall>
+        `;
+
+        const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
+        const duration = bestAdventure.duration / 2 + 5;
+        console.log(new Date().toLocaleTimeString());
+        console.log(`Waiting for ${duration} seconds before next adventure...`);
+        console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
+        await sleep(duration);
+        console.log("Getting the result of the adventure...");
+        const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
+        
+        await sleep(2);
     }
     
-    // Filter adventures and find the one with max gold
-    const bestAdventure = getBestAdventure(data);
-    
-    console.log('Selected adventure:', bestAdventure);
-    console.log(`Adventures made today: ${data.adventuresMadeToday}/${data.freeAdventuresPerDay}`);
-    console.log('Remaining adventures:', data.freeAdventuresPerDay - data.adventuresMadeToday);
 
-
-    const xmlStartAdventure = `
-        <methodCall>
-            <methodName>StartAdventure</methodName>
-            <params>
-                <param>
-                    <value>
-                        <string>${flashvars.sessionID}</string>
-                    </value>
-                </param>
-                <param>
-                    <value>
-                        <int>${bestAdventure.id}</int>
-                    </value>
-                </param>
-            </params>
-        </methodCall>
-    `;
-
-    const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
-    const duration = bestAdventure.duration / 2 + 10;
-    console.log(new Date().toLocaleTimeString());
-    console.log(`Waiting for ${duration} seconds before next adventure...`);
-    console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
-    await sleep(duration);
-    console.log("Getting the result of the adventure...");
-    const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
-    
-    await sleep(2);
-    return true; // Return true to indicate successful adventure
+    return data; // Return the data object for further processing
             
 }
 
@@ -535,18 +568,23 @@ async function runBot() {
             }
 
             console.log('Starting new adventure cycle...');
-            const hasMoreAdventures = await processAdventure();
-            
-            if (!hasMoreAdventures) {
+            const adventureData = await processAdventure();
+            if (adventureData.hasAnotherTaskRunning) {
+                console.log(`Another task is running: ${adventureData.taskRunning.typeTask}`);
+                console.log(`Waiting for ${adventureData.taskRunning.timeTask} seconds before retrying...`);
+                console.log('Estimated time:', new Date(Date.now() + adventureData.taskRunning.timeTask * 1000).toLocaleTimeString());
+                await sleep(adventureData.taskRunning.timeTask + 2);
+
+            }else if (!adventureData.hasRemainingAdventures) {
                 console.log('No more adventures available. Waiting for next cycle...');
-                await sleep(60);
-                continue;
+                await sleep(20 * 60);
+
             }
         }
     } catch (error) {
         console.error('Error in bot process:', error);
         console.log('Retrying in 60 seconds...');
-        await sleep(60);
+        await sleep(20 * 60);
         runBot(); // Restart the bot
     }
 }
