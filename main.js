@@ -352,77 +352,56 @@ async function processAdventure() {
     </methodCall>
     `;
 
-    try {
-        while (true) {
-            if(botConfig.spendGoldOn === 'attributes'){
-                console.log('Starting attributes process...');
-                await processAttributes();
 
-            } else if(botConfig.spendGoldOn === 'circle'){
-                console.log('Starting circle process...');
-                await processCircle();
-            } else {
-                console.error('Invalid value for spendGoldOn. Must be "attributes" or "circle".');
-            }
-
-
-            console.log('Starting new adventure cycle...');
             
-            const xmldata = await fetchXmlData(botConfig.url, xmlGetAdventures);
-            const data = parseAdventureXMLResponse(xmldata);
-            // Check if we have remaining adventures
-            if (!data.hasRemainingAdventures) {
-                console.log('No more adventures available today');
-                return; // Exit the loop
-            }
-            
-            // Filter adventures and find the one with max gold
-            const bestAdventure = getBestAdventure(data);
-            
-            console.log('Selected adventure:', bestAdventure);
-            console.log(`Adventures made today: ${data.adventuresMadeToday}/${data.freeAdventuresPerDay}`);
-            console.log('Remaining adventures:', data.freeAdventuresPerDay - data.adventuresMadeToday);
-
-
-            const xmlStartAdventure = `
-                <methodCall>
-                    <methodName>StartAdventure</methodName>
-                    <params>
-                        <param>
-                            <value>
-                                <string>${flashvars.sessionID}</string>
-                            </value>
-                        </param>
-                        <param>
-                            <value>
-                                <int>${bestAdventure.id}</int>
-                            </value>
-                        </param>
-                    </params>
-                </methodCall>
-            `;
-
-            const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
-            const duration = bestAdventure.duration / 2+10;
-            console.log(new Date().toLocaleTimeString());
-            console.log(`Waiting for ${duration} seconds before next adventure...`);
-            console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
-            await sleep(duration);
-            console.log("Getting the result of the adventure...");
-            const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
-            
-            await sleep(2);
-            
-        }
-    } catch (error) {
-        console.error('Error in adventure process:', error);
-        console.log('Retrying in 60 seconds...');
-        await sleep(60);
-        processAdventure();
+    const xmldata = await fetchXmlData(botConfig.url, xmlGetAdventures);
+    const data = parseAdventureXMLResponse(xmldata);
+    
+    // Check if we have remaining adventures
+    if (!data.hasRemainingAdventures) {
+        console.log('No more adventures available today');
+        return false; // Return false to indicate no more adventures
     }
-}
+    
+    // Filter adventures and find the one with max gold
+    const bestAdventure = getBestAdventure(data);
+    
+    console.log('Selected adventure:', bestAdventure);
+    console.log(`Adventures made today: ${data.adventuresMadeToday}/${data.freeAdventuresPerDay}`);
+    console.log('Remaining adventures:', data.freeAdventuresPerDay - data.adventuresMadeToday);
 
-processAdventure();
+
+    const xmlStartAdventure = `
+        <methodCall>
+            <methodName>StartAdventure</methodName>
+            <params>
+                <param>
+                    <value>
+                        <string>${flashvars.sessionID}</string>
+                    </value>
+                </param>
+                <param>
+                    <value>
+                        <int>${bestAdventure.id}</int>
+                    </value>
+                </param>
+            </params>
+        </methodCall>
+    `;
+
+    const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
+    const duration = bestAdventure.duration / 2 + 10;
+    console.log(new Date().toLocaleTimeString());
+    console.log(`Waiting for ${duration} seconds before next adventure...`);
+    console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
+    await sleep(duration);
+    console.log("Getting the result of the adventure...");
+    const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
+    
+    await sleep(2);
+    return true; // Return true to indicate successful adventure
+            
+}
 
 function parseAttributesXMLResponse(xmlString) {
     // Parse the XML string
@@ -471,7 +450,7 @@ async function getUserAttributesCost(){
     </methodCall>
     `;
 
-    const xmlData = await fetchXmlData('https://s2-en.tanoth.gameforge.com/xmlrpc', xmlGetAttributes);
+    const xmlData = await fetchXmlData(botConfig.url, xmlGetAttributes);
     return parseAttributesXMLResponse(xmlData);
 
 }
@@ -509,7 +488,7 @@ async function upgradeUserAttribute(attributeName){
     </methodCall>
     `;
 
-    const xmlData = await fetchXmlData('https://s2-en.tanoth.gameforge.com/xmlrpc', xmlUpgradeAttribute);
+    const xmlData = await fetchXmlData(botConfig.url, xmlUpgradeAttribute);
     return xmlData;
 }
 
@@ -539,79 +518,34 @@ async function processAttributes() {
 
 
 async function runBot() {
-    const xmlGetAdventures = `
-    <methodCall>
-        <methodName>GetAdventures</methodName>
-        <params>
-            <param>
-                <value>
-                    <string>${flashvars.sessionID}</string>
-                </value>
-            </param>
-        </params>
-    </methodCall>
-    `;
-
     try {
         while (true) {
-            console.log('Starting circle process...');
-            await processCircle();
+            // Handle gold spending based on configuration
+            if (botConfig.spendGoldOn === 'attributes') {
+                console.log('Starting attributes process...');
+                await processAttributes();
+            } else if (botConfig.spendGoldOn === 'circle') {
+                console.log('Starting circle process...');
+                await processCircle();
+            } else {
+                console.error('Invalid value for spendGoldOn. Must be "attributes" or "circle".');
+            }
 
             console.log('Starting new adventure cycle...');
+            const hasMoreAdventures = await processAdventure();
             
-            const xmldata = await fetchXmlData(botConfig.url, xmlGetAdventures);
-            const data = parseAdventureXMLResponse(xmldata);
-            // Check if we have remaining adventures
-            if (!data.hasRemainingAdventures) {
-                console.log('No more adventures available today');
-                return; // Exit the loop
+            if (!hasMoreAdventures) {
+                console.log('No more adventures available. Waiting for next cycle...');
+                await sleep(60);
+                continue;
             }
-            
-            // Filter adventures and find the one with max gold
-            const easyAdventures = data.adventures.filter(adventure => adventure.difficulty < 1);
-            const bestAdventure = easyAdventures.reduce((max, current) => 
-                current.gold > max.gold ? current : max, easyAdventures[0]);
-            
-            console.log('Selected adventure:', bestAdventure);
-            console.log(`Adventures made today: ${data.adventuresMadeToday}/${data.freeAdventuresPerDay}`);
-            console.log('Remaining adventures:', data.freeAdventuresPerDay - data.adventuresMadeToday);
-
-
-            const xmlStartAdventure = `
-                <methodCall>
-                    <methodName>StartAdventure</methodName>
-                    <params>
-                        <param>
-                            <value>
-                                <string>${flashvars.sessionID}</string>
-                            </value>
-                        </param>
-                        <param>
-                            <value>
-                                <int>${bestAdventure.id}</int>
-                            </value>
-                        </param>
-                    </params>
-                </methodCall>
-            `;
-
-            const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
-            const duration = bestAdventure.duration / 2+10;
-            console.log(new Date().toLocaleTimeString());
-            console.log(`Waiting for ${duration} seconds before next adventure...`);
-            console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
-            await sleep(duration);
-            console.log("Getting the result of the adventure...");
-            const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
-            
-            await sleep(2);
-            
         }
     } catch (error) {
-        console.error('Error in adventure process:', error);
+        console.error('Error in bot process:', error);
         console.log('Retrying in 60 seconds...');
         await sleep(60);
-        processAdventure();
+        runBot(); // Restart the bot
     }
 }
 
+runBot();
