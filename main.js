@@ -14,7 +14,34 @@ let botConfig = {
 };
 
 
-const sleep = (seconds) => new Promise(resolve => setTimeout(resolve, seconds * 1000));
+function sleep(seconds) {
+    return new Promise(resolve => setTimeout(resolve, seconds * 1000));
+}
+
+// Helper function to find value by name in a struct
+function findValueByName(struct, name, type) {
+    // Set default parameter value if not provided
+    if (type === undefined) {
+        type = 'i4';
+    }
+
+    const member = Array.from(struct.getElementsByTagName('member')).find(member => {
+        const nameElement = member.getElementsByTagName('name')[0];
+        return nameElement && nameElement.textContent === name;
+    });
+
+    if (member) {
+        const valueNode = member.getElementsByTagName('value')[0];
+        if (valueNode) {
+            const targetNode = valueNode.getElementsByTagName(type)[0];
+            if (targetNode) {
+                return targetNode.textContent;
+            }
+        }
+    }
+    return null;
+}
+
 
 const difficultyMap = {
     easy: -1,
@@ -95,39 +122,20 @@ function parseAdventureXMLResponse(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
-    // Helper function to find value by name in a struct
-    const findValueByName = (struct, name, type = 'i4') => {
-        const member = Array.from(struct.getElementsByTagName('member')).find(member => {
-            const nameElement = member.getElementsByTagName('name')[0];
-            return nameElement && nameElement.textContent === name;
-        });
-
-        if (member) {
-            const valueNode = member.getElementsByTagName('value')[0];
-            if (valueNode) {
-                const targetNode = valueNode.getElementsByTagName(type)[0];
-                if (targetNode) {
-                    return targetNode.textContent;
-                }
-            }
-        }
-        return null;
-    };
-
     // Extract adventure data
     const adventures = Array.from(xmlDoc.querySelectorAll('array > data > value > struct')).map(adventure => {
         return {
-            difficulty: parseInt(findValueByName(adventure, 'difficulty')),
-            gold: parseInt(findValueByName(adventure, 'gold')),
-            experience: parseInt(findValueByName(adventure, 'exp')),
-            duration: parseInt(findValueByName(adventure, 'duration')),
-            id: parseInt(findValueByName(adventure, 'quest_id'))
+            difficulty: parseInt(findValueByName(adventure, 'difficulty', 'i4')),
+            gold: parseInt(findValueByName(adventure, 'gold', 'i4')),
+            experience: parseInt(findValueByName(adventure, 'exp', 'i4')),
+            duration: parseInt(findValueByName(adventure, 'duration', 'i4')),
+            id: parseInt(findValueByName(adventure, 'quest_id', 'i4'))
         };
     });
 
     // Extract adventure counts
-    const adventuresMadeToday = parseInt(findValueByName(xmlDoc, 'adventures_made_today'));
-    const freeAdventuresPerDay = parseInt(findValueByName(xmlDoc, 'free_adventures_per_day'));
+    const adventuresMadeToday = parseInt(findValueByName(xmlDoc, 'adventures_made_today', 'i4'));
+    const freeAdventuresPerDay = parseInt(findValueByName(xmlDoc, 'free_adventures_per_day', 'i4'));
 
     return {
         adventures,
@@ -180,6 +188,11 @@ async function getCircleItems() {
 }
 
 function getBestCircleItem(circleItems) {
+    if (circleItems[16][0] == 10)
+    {
+        return null;
+    }
+    
     if (circleItems[8][0] < ((circleItems[16][0] + 1) * 100)) {
         return 8;
     }
