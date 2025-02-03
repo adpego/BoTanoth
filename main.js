@@ -9,7 +9,7 @@ let botConfig = {
     difficulty: 'medium',
 
     // After each adventure, spend gold on: 'attributes' or 'circle'
-    spendGoldOn: 'circle',
+    spendGoldOn: 'attributes',
 
     // Minimum gold to keep before spending (set to 0 to spend all gold)
     minGoldToSpend: 0
@@ -444,30 +444,12 @@ function parseAttributesXMLResponse(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
-    // Function to get the cost value for a given attribute
-    function getCostValue(attribute) {
-        // Find all <member> nodes
-        const members = xmlDoc.querySelectorAll('member');
-        for (const member of members) {
-            // Check if the <name> node matches the attribute
-            const nameNode = member.querySelector('name');
-            if (nameNode && nameNode.textContent === `cost_${attribute}`) {
-                // Get the corresponding <i4> value
-                const valueNode = member.querySelector('value > i4');
-                if (valueNode) {
-                    return parseInt(valueNode.textContent, 10);
-                }
-            }
-        }
-        return null; // Return null if not found
-    }
-
     // Extract cost values for each attribute
     const costValues = {
-        STR: getCostValue('str'),
-        DEX: getCostValue('dex'),
-        INT: getCostValue('int'),
-        CON: getCostValue('con')
+        STR: parseInt(findValueByName(xmlDoc, 'cost_str', 'i4')),
+        DEX: parseInt(findValueByName(xmlDoc, 'cost_dex', 'i4')),
+        CON: parseInt(findValueByName(xmlDoc, 'cost_con', 'i4')),
+        INT: parseInt(findValueByName(xmlDoc, 'cost_int', 'i4'))
     };
     return costValues;
 }   
@@ -535,12 +517,18 @@ async function processAttributes() {
     while (1) {
         try {
             console.log('Cost values:', costValues);
+            if (costValues.STR === null) {
+                console.log('Error fetching attribute costs. Exiting attribute process.');
+                break;
+            }
+
             const lowerCostAttribute = getLowerCostAttribute(costValues);
             console.log('Lower cost attribute:', lowerCostAttribute);
             const currentGold = await getCurrentGold();
             console.log('Current gold:', currentGold);
             if(currentGold >= costValues[lowerCostAttribute]){
-                costValues = parseAttributesXMLResponse(upgradeUserAttribute(lowerCostAttribute));
+                costValues = parseAttributesXMLResponse(await upgradeUserAttribute(lowerCostAttribute));
+
             } else {
                 console.log('Not enough gold to upgrade the attribute');
                 break;
