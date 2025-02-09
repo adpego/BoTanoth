@@ -86,18 +86,8 @@ function parseGoldXMLResponse(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
     
-    // Find all 'member' elements
-    const members = xmlDoc.getElementsByTagName("member");
-    
     // Loop through to find the 'gold' member and its value
-    let goldValue;
-    for (let i = 0; i < members.length; i++) {
-      const name = members[i].getElementsByTagName("name")[0]?.textContent;
-      if (name === "gold") {
-        goldValue = members[i].getElementsByTagName("i4")[0]?.textContent;
-        break;
-      }
-    }
+    let goldValue = parseInt(findValueByName(xmlDoc, 'gold', 'i4'))
     
     return parseInt(goldValue);
 }
