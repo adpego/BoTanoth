@@ -5,7 +5,7 @@ let botConfig = {
     // Server speed. Normal speed is 1, higher values are faster servers
     server_speed: 2,
     
-    // Priority: 'experience' or 'gold'
+    // Priority adventures: 'experience' or 'gold'
     priority: 'gold',
 
     // Max difficulty of adventures: 'easy', 'medium', 'difficult', 'very_difficult'
@@ -31,7 +31,7 @@ const difficultyMap = {
 };
 
 
-
+let isBotRunning = false;
 
 function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
@@ -543,6 +543,12 @@ async function processAttributes() {
 
 async function runBot() {
     try {
+        if (isBotRunning) {
+            console.log('Bot is already running.');
+            return;
+        }
+        isBotRunning = true;
+        console.log('Starting bot process...');
         while (true) {
             // Handle gold spending based on configuration
             if (botConfig.spendGoldOn === 'attributes') {
@@ -564,17 +570,19 @@ async function runBot() {
                 await sleep(adventureData.taskRunning.timeTask + 2);
 
             }else if (!adventureData.hasRemainingAdventures) {
-                console.log('No more adventures available. Waiting for next cycle...');
+                console.log('No more adventures available. Waiting 20 minutes for next cycle...');
                 await sleep(20 * 60);
 
             }
         }
     } catch (error) {
         console.error('Error in bot process:', error);
-        console.log('Retrying in 60 seconds...');
-        await sleep(20 * 60);
+        console.log('Retrying in 10 minutes...');
+        await sleep(10 * 60);
+        isBotRunning = false;
         runBot(); // Restart the bot
     }
 }
+
 
 runBot();
