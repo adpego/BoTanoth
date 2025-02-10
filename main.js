@@ -423,7 +423,7 @@ async function processAdventure() {
         `;
 
         const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
-        const duration = (bestAdventure.duration / server_speed) + 5;
+        const duration = (bestAdventure.duration / botConfig.server_speed) + 5;
         console.log(new Date().toLocaleTimeString());
         console.log(`Waiting for ${duration} seconds before next adventure...`);
         console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
