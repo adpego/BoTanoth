@@ -1,6 +1,9 @@
 let botConfig = {
     // Server address for the game
     server: 's2-en.tanoth.gameforge.com',
+
+    // Server speed. Normal speed is 1, higher values are faster servers
+    server_speed: 2,
     
     // Priority: 'experience' or 'gold'
     priority: 'gold',
@@ -9,7 +12,7 @@ let botConfig = {
     difficulty: 'medium',
 
     // After each adventure, spend gold on: 'attributes' or 'circle'
-    spendGoldOn: 'attributes',
+    spendGoldOn: 'circle',
 
     // Minimum gold to keep before spending (set to 0 to spend all gold)
     minGoldToSpend: 0
@@ -17,6 +20,18 @@ let botConfig = {
 
 
 botConfig.url = 'https://' + botConfig.server + '/xmlrpc';
+
+
+
+const difficultyMap = {
+    easy: -1,
+    medium: 0,
+    difficult: 1,
+    very_difficult: 2
+};
+
+
+
 
 function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
@@ -47,12 +62,7 @@ function findValueByName(struct, name, type) {
 }
 
 
-const difficultyMap = {
-    easy: -1,
-    medium: 0,
-    difficult: 1,
-    very_difficult: 2
-};
+
 
 
 // Function to fetch and parse XML data
@@ -413,7 +423,7 @@ async function processAdventure() {
         `;
 
         const startAdventure = await fetchXmlData(botConfig.url, xmlStartAdventure);
-        const duration = bestAdventure.duration / 2 + 5;
+        const duration = (bestAdventure.duration / server_speed) + 5;
         console.log(new Date().toLocaleTimeString());
         console.log(`Waiting for ${duration} seconds before next adventure...`);
         console.log('Estimated time:', new Date(Date.now() + duration * 1000).toLocaleTimeString());
