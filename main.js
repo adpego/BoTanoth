@@ -565,9 +565,16 @@ async function runBot() {
             const adventureData = await processAdventure();
             if (adventureData.hasAnotherTaskRunning) {
                 console.log(`Another task is running: ${adventureData.taskRunning.typeTask}`);
-                console.log(`Waiting for ${adventureData.taskRunning.timeTask} seconds before retrying...`);
-                console.log('Estimated time:', new Date(Date.now() + adventureData.taskRunning.timeTask * 1000).toLocaleTimeString());
-                await sleep(adventureData.taskRunning.timeTask + 2);
+                // Check if task time have NaN value
+                if (isNaN(adventureData.taskRunning.timeTask)) {
+                    console.log('Task time is NaN. Exiting process...');
+                    await sleep(10 * 60);
+                } else {
+                    console.log(`Waiting for ${adventureData.taskRunning.timeTask} seconds before retrying...`);
+                    console.log('Estimated time:', new Date(Date.now() + adventureData.taskRunning.timeTask * 1000).toLocaleTimeString());
+                    await sleep(adventureData.taskRunning.timeTask + 2);
+                }
+
 
             }else if (!adventureData.hasRemainingAdventures) {
                 console.log('No more adventures available. Waiting 20 minutes for next cycle...');
