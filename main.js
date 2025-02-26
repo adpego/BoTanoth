@@ -95,7 +95,7 @@ async function fetchXmlData(url, xmlData) {
 function parseGoldXMLResponse(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-    
+
     // Loop through to find the 'gold' member and its value
     let goldValue = parseInt(findValueByName(xmlDoc, 'gold', 'i4'))
     
@@ -301,6 +301,10 @@ async function processCircle() {
         try {
             const circleItems = await getCircleItems();
             const bestItem = getBestCircleItem(circleItems);
+            if (bestItem === null) {
+                console.log('No more items to buy. Exiting circle process.');
+                break;
+            }
             console.log('Best item to buy:', bestItem);
             const currentGold = await getCurrentGold();
             console.log('Current gold:', currentGold);
