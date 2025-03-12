@@ -1,7 +1,4 @@
 let botConfig = {
-    // Server address for the game
-    server: 's2-en.tanoth.gameforge.com',
-
     // Server speed. Normal speed is 1, higher values are faster servers
     server_speed: 2,
     
@@ -12,14 +9,15 @@ let botConfig = {
     difficulty: 'medium',
 
     // After each adventure, spend gold on: 'attributes' or 'circle'
-    spendGoldOn: 'circle',
+    // If circle it's completed, it will be changed to attributes.
+    spendGoldOn: 'attributes',
 
     // Minimum gold to keep before spending (set to 0 to spend all gold)
     minGoldToSpend: 0
 };
 
 
-botConfig.url = 'https://' + botConfig.server + '/xmlrpc';
+botConfig.url = window.location.href.replace("/main/client", "/xmlrpc");
 
 
 
@@ -303,6 +301,8 @@ async function processCircle() {
             const bestItem = getBestCircleItem(circleItems);
             if (bestItem === null) {
                 console.log('No more items to buy. Exiting circle process.');
+                // Change the spend gold on attribute to spend gold on the character attributes.
+                botConfig.spendGoldOn = "attributes";
                 break;
             }
             console.log('Best item to buy:', bestItem);

@@ -24,9 +24,6 @@ Before running the script, copy the full script, `main.js`, into a document, cha
 Are the firsts lines of the script.
 ```javascript
 let botConfig = {
-    // Server address for the game
-    server: 's1-en.tanoth.gameforge.com',
-
     // Server speed. Normal speed is 1, higher values are faster servers
     server_speed: 1,
     
