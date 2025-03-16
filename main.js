@@ -555,13 +555,18 @@ async function runBot() {
         console.log('Starting bot process...');
         while (true) {
             // Handle gold spending based on configuration
+            
+            if (botConfig.spendGoldOn === 'circle') {
+                console.log('Starting circle process...');
+                await processCircle();
+            } 
+
             if (botConfig.spendGoldOn === 'attributes') {
                 console.log('Starting attributes process...');
                 await processAttributes();
-            } else if (botConfig.spendGoldOn === 'circle') {
-                console.log('Starting circle process...');
-                await processCircle();
-            } else {
+            } 
+                 
+            if (botConfig.spendGoldOn !== 'attributes' && botConfig.spendGoldOn !== 'circle') {
                 console.error('Invalid value for spendGoldOn. Must be "attributes" or "circle".');
             }
 
