@@ -424,7 +424,7 @@ async function processAdventure() {
 
         if (!data.hasRemainingAdventures && botConfig.useBloodstones && (currentResources.bloodstones > botConfig.minBloodstonesToSpend)) {
             console.log('Using bloodstones to do more adventures...');
-         
+        }
 
         // Filter adventures and find the one with max gold
         const bestAdventure = getBestAdventure(data);
@@ -461,10 +461,6 @@ async function processAdventure() {
         const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
         
         await sleep(2);
-
-        } else {
-            console.log('No more bloodstones available to do more adventures...');
-        }
     }
     
 
