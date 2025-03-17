@@ -90,18 +90,18 @@ async function fetchXmlData(url, xmlData) {
 
 
 
-function parseGoldXMLResponse(xmlString) {
+function parseResourcesXMLResponse(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
-    // Loop through to find the 'gold' member and its value
-    let goldValue = parseInt(findValueByName(xmlDoc, 'gold', 'i4'))
-    
-    return parseInt(goldValue);
+    return {
+        gold: parseInt(findValueByName(xmlDoc, 'gold', 'i4')),
+        bloodstones: parseInt(findValueByName(xmlDoc, 'bs', 'i4')),
+    };
 }
 
-async function getCurrentGold(){
-    const xmlGetGold = `
+async function getCurrentResources(){
+    const xmlGetResources = `
     <methodCall>
         <methodName>MiniUpdate</methodName>
         <params>
@@ -114,8 +114,8 @@ async function getCurrentGold(){
     </methodCall>
     `;
     
-    const xmlGoldData = await fetchXmlData(botConfig.url, xmlGetGold);
-    return parseGoldXMLResponse(xmlGoldData);
+    const xmlResourcesData = await fetchXmlData(botConfig.url, xmlGetResources);
+    return parseResourcesXMLResponse(xmlResourcesData);
 }
 
 async function proccessCurrentTaskRunning(){
@@ -306,13 +306,21 @@ async function processCircle() {
                 break;
             }
             console.log('Best item to buy:', bestItem);
-            const currentGold = await getCurrentGold();
-            console.log('Current gold:', currentGold);
+            const getCurrentResources = await getCurrentResources();
+           
             
+            if (isNaN(currentResources.gold)) {
+                console.log('Error fetching current resources. Exiting circle process.');
+                break;
+            }
+
+            console.log('Current gold:', getCurrentResources.gold);
+            console.log('Current bloodstones:', getCurrentResources.bloodstones);
+
             const itemCost = circleItems[bestItem][3];
             
             // Ensure that after the purchase, at least minGoldToKeep remains
-            if (currentGold - itemCost >= botConfig.minGoldToSpend) {
+            if (getCurrentResources.gold - itemCost >= botConfig.minGoldToSpend) {
                 await buyCircleItem(bestItem);
             } else {
                 console.log('Not enough gold to buy the best item while keeping the minimum reserve');
@@ -528,9 +536,17 @@ async function processAttributes() {
 
             const lowerCostAttribute = getLowerCostAttribute(costValues);
             console.log('Lower cost attribute:', lowerCostAttribute);
-            const currentGold = await getCurrentGold();
-            console.log('Current gold:', currentGold);
-            if(currentGold >= costValues[lowerCostAttribute]){
+            const currentResources = await getCurrentResources();
+
+            if (isNaN(currentResources.gold)) {
+                console.log('Error fetching current resources. Exiting attribute process.');
+                break;
+            }
+
+            console.log('Current gold:', currentResources.gold);
+            console.log('Current bloodstones:', currentResources.bloodstones);
+
+            if(currentResources.gold >= costValues[lowerCostAttribute]){
                 costValues = parseAttributesXMLResponse(await upgradeUserAttribute(lowerCostAttribute));
 
             } else {
@@ -582,6 +598,9 @@ async function runBot() {
                     console.log(`Waiting for ${adventureData.taskRunning.timeTask} seconds before retrying...`);
                     console.log('Estimated time:', new Date(Date.now() + adventureData.taskRunning.timeTask * 1000).toLocaleTimeString());
                     await sleep(adventureData.taskRunning.timeTask + 2);
+
+                    /* Getting the possible result of the currently running task */
+                    const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
                 }
 
 
