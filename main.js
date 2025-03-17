@@ -17,7 +17,7 @@ let botConfig = {
 
     // ADVERTISEMENT Don't touch this is you are a Free to Play player!!!
     // Spend bloodstones doing adventures (true) or save them (false)
-    useBloodstones: true,
+    useBloodstones: false,
 
     // Minimum bloodstones to keep before spending (set to 0 to spend all bloodstones).
     // This configuration doesn't have any effect if useBloodstones is set to false.

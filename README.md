@@ -37,7 +37,15 @@ let botConfig = {
     spendGoldOn: 'circle',
 
     // Minimum gold to keep before spending (set to 0 to spend all gold)
-    minGoldToSpend: 0
+    minGoldToSpend: 0,
+
+    // ADVERTISEMENT Don't touch this is you are a Free to Play player!!!
+    // Spend bloodstones doing adventures (true) or save them (false)
+    useBloodstones: false,
+
+    // Minimum bloodstones to keep before spending (set to 0 to spend all bloodstones).
+    // This configuration doesn't have any effect if useBloodstones is set to false.
+    minBloodstonesToSpend: 0,
 };
 ```
 
@@ -48,7 +56,7 @@ Copy the full script content including the configuration and paste it into the *
 - Refresh the page to stop the bot.
 
 ## Notes
-- The bot runs until the adventures are finished.
+- The bot runs until the adventures are finished. It is possible to use bloodstones if you put the attribute "useBloodstones" to true.
 - It will spend gold on improving attributes or the circle based on configuration.
 - Since the bot executes tasks in the background, sometimes the game may not synchronize correctly.
 - I am not responsible for any bans resulting from the use of this bot.
