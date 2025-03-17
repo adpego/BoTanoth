@@ -13,12 +13,19 @@ let botConfig = {
     spendGoldOn: 'attributes',
 
     // Minimum gold to keep before spending (set to 0 to spend all gold)
-    minGoldToSpend: 0
+    minGoldToSpend: 0,
+
+    // ADVERTISEMENT Don't touch this is you are a Free to Play player!!!
+    // Spend bloodstones doing adventures (true) or save them (false)
+    useBloodstones: true,
+
+    // Minimum bloodstones to keep before spending (set to 0 to spend all bloodstones).
+    // This configuration doesn't have any effect if useBloodstones is set to false.
+    minBloodstonesToSpend: 0,
 };
 
 
 botConfig.url = window.location.href.replace("/main/client", "/xmlrpc");
-
 
 
 const difficultyMap = {
@@ -30,6 +37,12 @@ const difficultyMap = {
 
 
 let isBotRunning = false;
+let currentResources = {
+    gold: 0,
+    bloodstones: 0
+};
+
+
 
 function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
@@ -306,7 +319,7 @@ async function processCircle() {
                 break;
             }
             console.log('Best item to buy:', bestItem);
-            const getCurrentResources = await getCurrentResources();
+            currentResources = await getCurrentResources();
            
             
             if (isNaN(currentResources.gold)) {
@@ -314,13 +327,13 @@ async function processCircle() {
                 break;
             }
 
-            console.log('Current gold:', getCurrentResources.gold);
-            console.log('Current bloodstones:', getCurrentResources.bloodstones);
+            console.log('Current gold:', currentResources.gold);
+            console.log('Current bloodstones:', currentResources.bloodstones);
 
             const itemCost = circleItems[bestItem][3];
             
             // Ensure that after the purchase, at least minGoldToKeep remains
-            if (getCurrentResources.gold - itemCost >= botConfig.minGoldToSpend) {
+            if (currentResources.gold - itemCost >= botConfig.minGoldToSpend) {
                 await buyCircleItem(bestItem);
             } else {
                 console.log('Not enough gold to buy the best item while keeping the minimum reserve');
@@ -379,24 +392,23 @@ function parseAnotherTaskRunningXmlResponse(xmlString) {
     return {timeTask, typeTask};
 }
 
+
+const xmlGetAdventures = `
+<methodCall>
+    <methodName>GetAdventures</methodName>
+    <params>
+        <param>
+            <value>
+                <string>${flashvars.sessionID}</string>
+            </value>
+        </param>
+    </params>
+</methodCall>
+`;
+
 // Main process function
 async function processAdventure() {
-
-    const xmlGetAdventures = `
-    <methodCall>
-        <methodName>GetAdventures</methodName>
-        <params>
-            <param>
-                <value>
-                    <string>${flashvars.sessionID}</string>
-                </value>
-            </param>
-        </params>
-    </methodCall>
-    `;
-
-
-            
+           
     const xmldata = await fetchXmlData(botConfig.url, xmlGetAdventures);
     const data = parseAdventureXMLResponse(xmldata);
 
@@ -405,10 +417,15 @@ async function processAdventure() {
         data.hasAnotherTaskRunning = true;
         data.taskRunning = await proccessCurrentTaskRunning();
 
-    } else if (!data.hasRemainingAdventures) {
+    } else if (!data.hasRemainingAdventures && (!botConfig.useBloodstones || (currentResources.bloodstones <= botConfig.minBloodstonesToSpend))) {
         console.log('No more adventures available today');
         
     } else {
+
+        if (!data.hasRemainingAdventures && botConfig.useBloodstones && (currentResources.bloodstones > botConfig.minBloodstonesToSpend)) {
+            console.log('Using bloodstones to do more adventures...');
+         
+
         // Filter adventures and find the one with max gold
         const bestAdventure = getBestAdventure(data);
         
@@ -444,6 +461,10 @@ async function processAdventure() {
         const result = await fetchXmlData(botConfig.url, xmlGetAdventures);
         
         await sleep(2);
+
+        } else {
+            console.log('No more bloodstones available to do more adventures...');
+        }
     }
     
 
@@ -536,7 +557,7 @@ async function processAttributes() {
 
             const lowerCostAttribute = getLowerCostAttribute(costValues);
             console.log('Lower cost attribute:', lowerCostAttribute);
-            const currentResources = await getCurrentResources();
+            currentResources = await getCurrentResources();
 
             if (isNaN(currentResources.gold)) {
                 console.log('Error fetching current resources. Exiting attribute process.');
@@ -604,7 +625,7 @@ async function runBot() {
                 }
 
 
-            }else if (!adventureData.hasRemainingAdventures) {
+            }else if (!adventureData.hasRemainingAdventures && (!botConfig.useBloodstones || (currentResources.bloodstones <= botConfig.minBloodstonesToSpend))) {
                 console.log('No more adventures available. Waiting 20 minutes for next cycle...');
                 await sleep(20 * 60);
 
