@@ -78,3 +78,8 @@ Copy the full script content including the configuration and paste it into the *
 
 Enjoy playing Tanoth with automation! 🚀
 
+
+## Contact
+For any bug or suggestion, send a message to my telegram [@adpego](https://t.me/adpego) or write an email to: [adpegotanoth@gmail.com](mailto:adpegotanoth@gmail.com)
+
+
