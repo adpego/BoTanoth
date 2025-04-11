@@ -2,15 +2,25 @@ let botConfig = {
     // Server speed. Normal speed is 1, higher values are faster servers
     server_speed: 2,
     
-    // Priority adventures: 'experience' or 'gold'
-    priority: 'gold',
+    // Priority on adventures: 'experience' or 'gold'
+    priorityAdventure: 'gold',
 
     // Max difficulty of adventures: 'easy', 'medium', 'difficult', 'very_difficult'
     difficulty: 'medium',
 
     // After each adventure, spend gold on: 'attributes' or 'circle'
     // If circle it's completed, it will be changed to attributes.
-    spendGoldOn: 'attributes',
+    spendGoldOn: 'circle',
+
+    // Priority for wasting gold on particular attribute: 'MIX', 'STR', 'DEX', 'CON', 'INT'. 
+    // (Only used when spendGoldOn is set to 'attributes', or when the circle is completed)
+    // Options:
+    //   MIX -> More cheapest attribute to upgrade
+    //   STR -> Strength
+    //   DEX -> Dexterity
+    //   CON -> Constitution
+    //   INT -> Intelligence
+    priorityAttribute: 'MIX',
 
     // Minimum gold to keep before spending (set to 0 to spend all gold)
     minGoldToSpend: 0,
@@ -366,7 +376,7 @@ const findBestAdventure = (adventures, priority) => {
 };
 
 function getBestAdventure(data) {
-    const { difficulty, priority } = botConfig;
+    const { difficulty, priorityAdventure } = botConfig;
 
     // Filter adventures based on difficulty
     const filteredAdventures = filterAdventuresByDifficulty(data.adventures, difficulty);
@@ -378,7 +388,7 @@ function getBestAdventure(data) {
     }
 
     // Find the best adventure based on priority
-    const bestAdventure = findBestAdventure(filteredAdventures, priority);
+    const bestAdventure = findBestAdventure(filteredAdventures, priorityAdventure);
 
     return bestAdventure;
 }
@@ -550,9 +560,19 @@ async function processAttributes() {
                 console.log('Error fetching attribute costs. Exiting attribute process.');
                 break;
             }
+            
+            let selectedAttribute = botConfig.priorityAttribute;
 
-            const lowerCostAttribute = getLowerCostAttribute(costValues);
-            console.log('Lower cost attribute:', lowerCostAttribute);
+            if (selectedAttribute != 'MIX' && costValues[selectedAttribute] === undefined) {
+                console.log('Invalid attribute selected. Setted to MIX.');
+                selectedAttribute = 'MIX';
+            }
+
+            if (selectedAttribute == 'MIX') {
+                selectedAttribute = getLowerCostAttribute(costValues);
+            }
+
+            console.log('Selected attribute:', selectedAttribute);
             currentResources = await getCurrentResources();
 
             if (isNaN(currentResources.gold)) {
@@ -560,11 +580,10 @@ async function processAttributes() {
                 break;
             }
 
-            console.log('Current gold:', currentResources.gold);
-            console.log('Current bloodstones:', currentResources.bloodstones);
+            console.log('Current Gold:', currentResources.gold, '| Bloodstones:', currentResources.bloodstones);
 
-            if(currentResources.gold >= costValues[lowerCostAttribute]){
-                costValues = parseAttributesXMLResponse(await upgradeUserAttribute(lowerCostAttribute));
+            if(currentResources.gold >= costValues[selectedAttribute]){
+                costValues = parseAttributesXMLResponse(await upgradeUserAttribute(selectedAttribute));
 
             } else {
                 console.log('Not enough gold to upgrade the attribute');

@@ -1,8 +1,12 @@
-# BoTanoth
-
+# BoTanoth 1.1.0
 This script automates tasks in the Tanoth game. To use it, follow the instructions below.
 
-## Features
+
+## New release features
+- New configuration to set priority for upgrade attributes.
+
+
+## Bot Features
 - Automatically completes adventures
 - Manages gold spending based on configuration
 - Supports different difficulty and priorities of adventures
@@ -28,13 +32,24 @@ let botConfig = {
     server_speed: 1,
     
     // Priority adventures: 'experience' or 'gold'
-    priority: 'gold',
+    priorityAdventure: 'gold',
 
     // Max difficulty of adventures: 'easy', 'medium', 'difficult', 'very_difficult'
     difficulty: 'medium',
 
     // After each adventure, spend gold on: 'attributes' or 'circle'
+    // If circle it's completed, it will be changed to attributes.
     spendGoldOn: 'circle',
+
+    // Priority for wasting gold on particular attribute: 'MIX', 'STR', 'DEX', 'CON', 'INT'. 
+    // (Only used when spendGoldOn is set to 'attributes', or when the circle is completed)
+    // Options:
+    //   MIX -> More cheapest attribute to upgrade
+    //   STR -> Strength
+    //   DEX -> Dexterity
+    //   CON -> Constitution
+    //   INT -> Intelligence
+    priorityAttribute: 'MIX',
 
     // Minimum gold to keep before spending (set to 0 to spend all gold)
     minGoldToSpend: 0,
