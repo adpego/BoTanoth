@@ -1,8 +1,9 @@
-# BoTanoth 1.1.0
+# BoTanoth 1.1.1
 This script automates tasks in the Tanoth game. To use it, follow the instructions below.
 
 
 ## New release features
+- FIX: Circle fixed after game update
 - New configuration to set priority for upgrade attributes.
 
 

@@ -308,6 +308,11 @@ async function buyCircleItem(itemId) {
                     <int>${itemId}</int>
                 </value>
             </param>
+            <param>
+                <value>
+                    <int>1</int>
+                </value>
+            </param>
         </params>
     </methodCall>
     `;
@@ -340,7 +345,7 @@ async function processCircle() {
             console.log('Current gold:', currentResources.gold);
             console.log('Current bloodstones:', currentResources.bloodstones);
 
-            const itemCost = circleItems[bestItem][3];
+            const itemCost = (circleItems[bestItem][11] * 5) + 10;
             
             // Ensure that after the purchase, at least minGoldToKeep remains
             if (currentResources.gold - itemCost >= botConfig.minGoldToSpend) {
