@@ -1,4 +1,4 @@
-# BoTanoth 1.1.1
+# BoTanoth 1.1.2 (Fix Circle)
 This script automates tasks in the Tanoth game. To use it, follow the instructions below.
 
 

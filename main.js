@@ -322,6 +322,8 @@ async function buyCircleItem(itemId) {
 
 
 async function processCircle() {
+    let oldCurrentResourcesGold = 0;
+    
     while (1) {
         
         try {
@@ -335,17 +337,34 @@ async function processCircle() {
             }
             console.log('Best item to buy:', bestItem);
             currentResources = await getCurrentResources();
-           
+            
             
             if (isNaN(currentResources.gold)) {
                 console.log('Error fetching current resources. Exiting circle process.');
                 break;
             }
 
+            if (currentResources.gold == oldCurrentResourcesGold) {
+                console.log('No gold change. Exiting circle process.');
+                break;
+            }
+            oldCurrentResourcesGold = currentResources.gold;
+
             console.log('Current gold:', currentResources.gold);
             console.log('Current bloodstones:', currentResources.bloodstones);
 
-            const itemCost = (circleItems[bestItem][11] * 5) + 10;
+            let itemCost = 0;
+            if (bestItem == 16){
+                itemCost = (circleItems[bestItem][11] * 2500) + 5000;
+            } else if ((bestItem => 1) && (bestItem <= 10)) {
+                itemCost = (circleItems[bestItem][11] * 5) + 10;
+            } else if ((bestItem => 11) && (bestItem <= 15)) {
+                itemCost = (circleItems[bestItem][11] * 50) + 100;
+            } else {
+                console.log('Invalid item ID. Exiting circle process.');
+                break;
+            }
+            console.log('Item cost:', itemCost);
             
             // Ensure that after the purchase, at least minGoldToKeep remains
             if (currentResources.gold - itemCost >= botConfig.minGoldToSpend) {
