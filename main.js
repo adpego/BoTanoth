@@ -503,19 +503,32 @@ async function processAdventure() {
 }
 
 function parseAttributesXMLResponse(xmlString) {
-    // Parse the XML string
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
-    // Extract cost values for each attribute
-    const costValues = {
-        STR: parseInt(findValueByName(xmlDoc, 'cost_str', 'i4')),
-        DEX: parseInt(findValueByName(xmlDoc, 'cost_dex', 'i4')),
-        CON: parseInt(findValueByName(xmlDoc, 'cost_con', 'i4')),
-        INT: parseInt(findValueByName(xmlDoc, 'cost_int', 'i4'))
+    // Global cost parameters
+    const base = parseFloat(findValueByName(xmlDoc, 'attributeCostBase', 'i4'));
+    const factor = parseFloat(findValueByName(xmlDoc, 'attributeCostFactor', 'double'));
+    const increment = parseFloat(findValueByName(xmlDoc, 'attributeCostIncrement', 'i4'));
+
+    // Bought values
+    const strBought = parseInt(findValueByName(xmlDoc, 'str_bought', 'i4'));
+    const dexBought = parseInt(findValueByName(xmlDoc, 'dex_bought', 'i4'));
+    const conBought = parseInt(findValueByName(xmlDoc, 'con_bought', 'i4'));
+    const intBought = parseInt(findValueByName(xmlDoc, 'int_bought', 'i4'));
+
+    // Cost formula
+    function calcCost(bought) {
+        return Math.floor((base + (bought * increment)) * factor);
+    }
+
+    return {
+        STR: calcCost(strBought),
+        DEX: calcCost(dexBought),
+        CON: calcCost(conBought),
+        INT: calcCost(intBought)
     };
-    return costValues;
-}   
+}
 
 async function getUserAttributesCost(){
     const xmlGetAttributes = `
@@ -530,7 +543,6 @@ async function getUserAttributesCost(){
         </params>
     </methodCall>
     `;
-
     const xmlData = await fetchXmlData(botConfig.url, xmlGetAttributes);
     return parseAttributesXMLResponse(xmlData);
 
@@ -557,12 +569,17 @@ async function upgradeUserAttribute(attributeName){
         <params>
             <param>
                 <value>
-                <string>${flashvars.sessionID}</string>
+                    <string>${flashvars.sessionID}</string>
                 </value>
             </param>
             <param>
                 <value>
                     <string>${attributeName}</string>
+                </value>
+            </param>
+            <param>
+                <value>
+                    <int>1</int>
                 </value>
             </param>
         </params>
