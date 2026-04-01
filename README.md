@@ -1,9 +1,10 @@
-# BoTanoth 1.1.3 (Fix Attribute upgrade)
+# BoTanoth 1.1.4 (Fix Attribute upgrade and Circle prices)
 This script automates tasks in the Tanoth game. To use it, follow the instructions below.
 
 
 ## New release features
 - FIX: Attribute upgrade fixed after game update
+- FIX: Circle price calculation
 
 
 ## Bot Features

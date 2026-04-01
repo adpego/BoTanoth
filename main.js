@@ -353,17 +353,8 @@ async function processCircle() {
             console.log('Current gold:', currentResources.gold);
             console.log('Current bloodstones:', currentResources.bloodstones);
 
-            let itemCost = 0;
-            if (bestItem == 16){
-                itemCost = (circleItems[bestItem][11] * 2500) + 5000;
-            } else if ((bestItem => 1) && (bestItem <= 10)) {
-                itemCost = (circleItems[bestItem][11] * 5) + 10;
-            } else if ((bestItem => 11) && (bestItem <= 15)) {
-                itemCost = (circleItems[bestItem][11] * 50) + 100;
-            } else {
-                console.log('Invalid item ID. Exiting circle process.');
-                break;
-            }
+            const [currentLevel, , , , , base, increment, factor] = circleItems[bestItem];
+            const itemCost = Math.floor((base + currentLevel * increment) * factor);
             console.log('Item cost:', itemCost);
             
             // Ensure that after the purchase, at least minGoldToKeep remains
@@ -681,7 +672,10 @@ async function runBot() {
                 }
 
 
-            }else if (!adventureData.hasRemainingAdventures && (!botConfig.useBloodstones || (currentResources.bloodstones <= botConfig.minBloodstonesToSpend))) {
+            } else if (!adventureData.hasRemainingAdventures && botConfig.useBloodstones && currentResources.bloodstones > botConfig.minBloodstonesToSpend) {
+                console.log(`No free adventures left. Using bloodstones (${currentResources.bloodstones} available)...`);
+
+            } else if (!adventureData.hasRemainingAdventures) {
                 console.log('No more adventures available. Waiting 20 minutes for next cycle...');
                 await sleep(20 * 60);
 
