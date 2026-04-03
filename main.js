@@ -102,11 +102,25 @@ async function fetchXmlData(url, xmlData) {
         }
 
         const xmlString = await response.text();
-        return xmlString;
+        
+        // Sanitize XML by removing invalid control characters
+        const sanitizedXml = sanitizeXml(xmlString);
+        
+        return sanitizedXml;
     } catch (error) {
         console.error('Error fetching or parsing data:', error);
         throw error;
     }
+}
+
+// Helper function to remove invalid XML characters
+function sanitizeXml(xmlString) {
+    // Remove control characters except tab (0x09), line feed (0x0A), and carriage return (0x0D)
+    // Valid XML chars: #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+    return xmlString.replace(
+        /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]/g,
+        ''
+    );
 }
 
 
